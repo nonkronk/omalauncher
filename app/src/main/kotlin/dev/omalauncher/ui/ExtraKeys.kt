@@ -112,8 +112,8 @@ val DefaultLayout: List<List<ExtraKey>> =
         ),
         listOf(
             Plain("tab", Keys.KEY_TAB),
-            Sticky("ctrl") { it.ctrl },
-            Sticky("alt") { it.alt },
+            Sticky("ctrl", { it.ctrl }),
+            Sticky("alt", { it.alt }),
             Plain("left", Keys.KEY_LEFT, repeats = true, arrow = -90f),
             Plain("down", Keys.KEY_DOWN, repeats = true, arrow = 180f),
             Plain("right", Keys.KEY_RIGHT, repeats = true, arrow = 90f),
