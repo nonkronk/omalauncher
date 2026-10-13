@@ -40,6 +40,12 @@ android {
     testOptions { unitTests.isReturnDefaultValues = true }
 
     signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             uploadKey?.let {
                 storeFile = rootProject.file(it.getProperty("storeFile"))
