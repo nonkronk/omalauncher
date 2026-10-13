@@ -350,7 +350,7 @@ object ExtraKeysConfig {
             "BKSP", "BACKSPACE" -> Keys.KEY_BACKSPACE
             "DEL", "DELETE" -> 111
             "INS", "INSERT" -> Keys.KEY_INSERT
-            "SPACE" -> Keys.KEY_SPACE
+            "SPACE" -> 57 /* KEY_SPACE */
             "F11" -> 87
             "F12" -> 88
             else -> {
