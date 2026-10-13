@@ -526,6 +526,7 @@ private fun PlainKey(key: Plain, bridge: KeyboardBridge, modifier: Modifier) {
                             } else if (popupSelected && dragY >= -threshold) {
                                 popupSelected = false
                             }
+                            if (popupSelected) change.consume() // Prevent a parent swipe gesture from stealing the popup.
                         }
                         if (released && key.popup != null) {
                             if (popupSelected) {
@@ -612,6 +613,7 @@ private fun StickyKey(key: Sticky, sticky: StickyModifier, bridge: KeyboardBridg
                             } else if (popupSelected && dragY >= -threshold) {
                                 popupSelected = false
                             }
+                            if (popupSelected) change.consume() // Prevent a parent swipe gesture from stealing the popup.
                         }
                         if (released) {
                             if (popupSelected && key.popup != null) {
