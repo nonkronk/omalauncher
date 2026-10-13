@@ -6,12 +6,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
@@ -30,12 +30,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.omalauncher.wayland.Keys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
@@ -55,6 +55,15 @@ val ExtraKeysHeight = RowHeight * 2 + (FrameWidth + KeyGap) * 2 + Gap
 
 private sealed interface ExtraKey
 
+/**
+ * A popup key action triggered by swiping up on a keycap.
+ */
+private data class Popup(
+    val display: String,
+    val code: Int,
+    val held: Int? = null,
+)
+
 /** A key that sends [code], with [held] down around it; drawn as [label], or as a chevron turned [arrow] degrees from up. */
 private data class Plain(
     val label: String,
@@ -62,6 +71,7 @@ private data class Plain(
     val repeats: Boolean = false,
     val arrow: Float? = null,
     val held: Int? = null,
+    val popup: Popup? = null,
 ) : ExtraKey
 
 private data class Sticky(
@@ -69,28 +79,62 @@ private data class Sticky(
     val modifier: (KeyboardBridge) -> StickyModifier,
 ) : ExtraKey
 
+// Linux evdev scancodes for alphanumeric keys used in Termux macros
+private const val KEY_A = 30
+private const val KEY_E = 18
+private const val KEY_J = 36
+
+/**
+ * Custom 7-column layout with swipe-up (popup) actions imported from Termux.
+ */
 private val Layout: List<List<ExtraKey>> =
     listOf(
         listOf(
             Plain("esc", Keys.KEY_ESC),
             Plain("/", Keys.KEY_SLASH),
             Plain("-", Keys.KEY_MINUS),
-            Plain("home", Keys.KEY_HOME),
+            Plain(
+                label = "home",
+                code = Keys.KEY_HOME,
+                popup = Popup(display = "⇤", code = KEY_A, held = Keys.KEY_LEFTCTRL), // CTRL A (FIRST)
+            ),
             Plain("up", Keys.KEY_UP, repeats = true, arrow = 0f),
-            Plain("end", Keys.KEY_END),
+            Plain(
+                label = "end",
+                code = Keys.KEY_END,
+                popup = Popup(display = "⇥", code = KEY_E, held = Keys.KEY_LEFTCTRL), // CTRL E (LAST)
+            ),
             Plain("pgup", Keys.KEY_PAGEUP, repeats = true),
-            // Ctrl+Insert and Shift+Insert: the clipboard keys foot, GTK and Qt all know.
-            Plain("copy", Keys.KEY_INSERT, held = Keys.KEY_LEFTCTRL),
         ),
         listOf(
-            Plain("tab", Keys.KEY_TAB),
+            Plain(
+                label = "tab",
+                code = Keys.KEY_TAB,
+                popup = Popup(display = "⇧TAB", code = Keys.KEY_TAB, held = Keys.KEY_LEFTSHIFT), // Shift+Tab
+            ),
             Sticky("ctrl") { it.ctrl },
             Sticky("alt") { it.alt },
-            Plain("left", Keys.KEY_LEFT, repeats = true, arrow = -90f),
+            Plain(
+                label = "left",
+                code = Keys.KEY_LEFT,
+                repeats = true,
+                arrow = -90f,
+                popup = Popup(display = "W←", code = Keys.KEY_LEFT, held = Keys.KEY_LEFTCTRL), // CTRL LEFT (WORD ←)
+            ),
             Plain("down", Keys.KEY_DOWN, repeats = true, arrow = 180f),
-            Plain("right", Keys.KEY_RIGHT, repeats = true, arrow = 90f),
-            Plain("pgdn", Keys.KEY_PAGEDOWN, repeats = true),
-            Plain("paste", Keys.KEY_INSERT, held = Keys.KEY_LEFTSHIFT),
+            Plain(
+                label = "right",
+                code = Keys.KEY_RIGHT,
+                repeats = true,
+                arrow = 90f,
+                popup = Popup(display = "W→", code = Keys.KEY_RIGHT, held = Keys.KEY_LEFTCTRL), // CTRL RIGHT (WORD →)
+            ),
+            Plain(
+                label = "pgdn",
+                code = Keys.KEY_PAGEDOWN,
+                repeats = true,
+                popup = Popup(display = "⇧⏎", code = KEY_J, held = Keys.KEY_LEFTCTRL), // CTRL j (⇧ENTER)
+            ),
         ),
     )
 
@@ -104,7 +148,6 @@ private val Layout: List<List<ExtraKey>> =
 fun extraKeysWanted(): Boolean {
     val ime = WindowInsets.ime
     val density = LocalDensity.current
-    // Derived, so the keyboard's slide-in animation doesn't recompose every frame.
     val docked by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
     return docked
 }
@@ -148,34 +191,91 @@ private fun PlainKey(
     modifier: Modifier,
 ) {
     val view = LocalView.current
+    val density = LocalDensity.current
     var pressed by remember { mutableStateOf(false) }
+    var popupTriggered by remember { mutableStateOf(false) }
+
     KeyCap(
         modifier.pointerInput(key) {
-            presses { scope ->
-                pressed = true
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                val press =
-                    scope.launch {
-                        bridge.tap(key.code, key.held)
-                        if (!key.repeats) return@launch
-                        delay(RepeatDelay)
-                        while (true) {
-                            bridge.tap(key.code, key.held)
-                            delay(RepeatInterval)
+            val swipeThresholdPx = with(density) { 16.dp.toPx() }
+            coroutineScope {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    pressed = true
+                    popupTriggered = false
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+
+                    var repeatJob =
+                        if (key.repeats && key.popup == null) {
+                            launch {
+                                bridge.tap(key.code, key.held)
+                                delay(RepeatDelay)
+                                while (true) {
+                                    bridge.tap(key.code, key.held)
+                                    delay(RepeatInterval)
+                                }
+                            }
+                        } else null
+
+                    var totalDragY = 0f
+                    var isSwipeUp = false
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) {
+                            change.consume()
+                            break
+                        }
+                        totalDragY += (change.position.y - change.previousPosition.y)
+                        if (key.popup != null && totalDragY < -swipeThresholdPx && !isSwipeUp) {
+                            isSwipeUp = true
+                            popupTriggered = true
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            change.consume()
+                            break
                         }
                     }
-                waitForUpOrCancellation()
-                press.cancel()
-                pressed = false
+
+                    repeatJob?.cancel()
+
+                    if (isSwipeUp && key.popup != null) {
+                        bridge.tap(key.popup.code, key.popup.held)
+                    } else if (repeatJob == null) {
+                        bridge.tap(key.code, key.held)
+                    }
+
+                    pressed = false
+                    popupTriggered = false
+                }
             }
         },
         fill = if (pressed) Palette.accent else Palette.surface,
     ) {
         val color = if (pressed) Palette.background else Palette.foreground
-        if (key.arrow != null) {
-            Image(Icons.Chevron, key.label, Modifier.size(20.dp).rotate(key.arrow), colorFilter = ColorFilter.tint(color))
-        } else {
-            BasicText(key.label, style = Mono.copy(color = color))
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Popup hint badge in top-right corner, like Termux
+            if (key.popup != null) {
+                BasicText(
+                    text = key.popup.display,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 3.dp),
+                    style = Mono.copy(
+                        color = if (popupTriggered) Palette.background else Palette.accent,
+                        fontSize = 8.sp,
+                    ),
+                )
+            }
+
+            if (key.arrow != null) {
+                Image(
+                    Icons.Chevron,
+                    key.label,
+                    Modifier.size(20.dp).rotate(key.arrow),
+                    colorFilter = ColorFilter.tint(color),
+                )
+            } else {
+                BasicText(key.label, style = Mono.copy(color = color))
+            }
         }
     }
 }
@@ -190,19 +290,26 @@ private fun StickyKey(
     val latch = sticky.latch
     KeyCap(
         modifier.pointerInput(sticky) {
-            presses { scope ->
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                var locked = false
-                val hold =
-                    scope.launch {
-                        delay(RepeatDelay)
-                        sticky.latch = Latch.Locked
-                        locked = true
-                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            coroutineScope {
+                awaitEachGesture {
+                    awaitFirstDown()
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    var locked = false
+                    val hold =
+                        launch {
+                            delay(RepeatDelay)
+                            sticky.latch = Latch.Locked
+                            locked = true
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        }
+                    // Wait for pointer release
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.changes.none { it.pressed }) break
                     }
-                val up = waitForUpOrCancellation() != null
-                hold.cancel()
-                if (up && !locked) sticky.latch = if (sticky.latch == Latch.Off) Latch.Once else Latch.Off
+                    hold.cancel()
+                    if (!locked) sticky.latch = if (sticky.latch == Latch.Off) Latch.Once else Latch.Off
+                }
             }
         },
         // Once: outlined in the accent, for the next key. Locked: filled, until tapped off.
@@ -240,16 +347,6 @@ private fun KeyCap(
         contentAlignment = Alignment.Center,
     ) { content() }
 }
-
-/** Runs [press] for each touch on the key, with a scope to start key repeat or long-press timers in. */
-private suspend fun PointerInputScope.presses(press: suspend AwaitPointerEventScope.(CoroutineScope) -> Unit) =
-    coroutineScope {
-        val scope = this
-        awaitEachGesture {
-            awaitFirstDown()
-            press(scope)
-        }
-    }
 
 private const val RepeatDelay = 400L
 private const val RepeatInterval = 50L
