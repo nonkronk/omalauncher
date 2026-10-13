@@ -185,7 +185,10 @@ object ExtraKeysConfig {
     private fun extractArrayString(raw: String): String? {
         val start = if (raw.trimStart().startsWith("[")) raw.indexOf('[') else {
             val match = propertyLine.find(raw) ?: return null
-            raw.indexOf('[', match.range.last + 1).takeIf { it >= 0 } ?: return null
+            var next = match.range.last + 1
+            while (next < raw.length && raw[next].isWhitespace()) next++
+            if (raw.getOrNull(next) != '[') return null
+            next
         }
         var depth = 0
         var quoted: Char? = null
@@ -450,10 +453,10 @@ fun ExtraKeys(
     }
 }
 
-private fun modifierGlyphs(bridge: KeyboardBridge, held: Int? = null): String = buildString {
-    if (bridge.ctrl.latch != Latch.Off || held == Keys.KEY_LEFTCTRL) append("⌃")
-    if (bridge.alt.latch != Latch.Off || held == Keys.KEY_LEFTALT) append("⌥")
-    if (bridge.shift.latch != Latch.Off || held == Keys.KEY_LEFTSHIFT) append("⇧")
+private fun modifierGlyphs(bridge: KeyboardBridge): String = buildString {
+    if (bridge.ctrl.latch != Latch.Off) append("⌃")
+    if (bridge.alt.latch != Latch.Off) append("⌥")
+    if (bridge.shift.latch != Latch.Off) append("⇧")
 }
 
 private fun sendStrokes(bridge: KeyboardBridge, strokes: List<ExtraStroke>) {
@@ -475,7 +478,7 @@ private fun PlainKey(key: Plain, bridge: KeyboardBridge, modifier: Modifier) {
     val density = LocalDensity.current
     var pressed by remember(key) { mutableStateOf(false) }
     var popupSelected by remember(key) { mutableStateOf(false) }
-    val modifiers = modifierGlyphs(bridge, key.held)
+    val modifiers = modifierGlyphs(bridge)
 
     KeyCap(
         modifier.pointerInput(key) {
