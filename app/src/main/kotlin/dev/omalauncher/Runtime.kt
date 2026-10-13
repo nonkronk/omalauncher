@@ -40,6 +40,7 @@ import dev.omalauncher.linux.shellQuote
 import dev.omalauncher.theme.Style
 import dev.omalauncher.theme.StyleStore
 import dev.omalauncher.theme.ThemeStore
+import dev.omalauncher.ui.ExtraKeysStore
 import dev.omalauncher.ui.Gestures
 import dev.omalauncher.ui.KeyboardBridge
 import dev.omalauncher.ui.TerminalTiles
@@ -77,6 +78,7 @@ class Runtime(
     val keyboard = KeyboardBridge(wm)
     val terminals = TerminalTiles(this)
     val style = StyleStore(context)
+    val extraKeys = ExtraKeysStore(context, proot)
     val terminalFont = TerminalFont(proot, style)
     val gestures = Gestures(context)
     val linuxApps = mutableStateListOf<LinuxApp>()
@@ -201,6 +203,7 @@ class Runtime(
             themes.load()
             style.start()
             widgets.start()
+            extraKeys.start()
             // On the first-run screen the download is the screen's job, with progress.
             if (launcherReady) scope.launch { themes.ensureRelease() }
             if (bootstrap.wanted) runLinux { bootstrap.run() } else bootstrap.run()

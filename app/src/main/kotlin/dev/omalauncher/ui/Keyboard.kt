@@ -36,7 +36,8 @@ class KeyboardBridge(
 
     val ctrl = StickyModifier(Keys.KEY_LEFTCTRL)
     val alt = StickyModifier(Keys.KEY_LEFTALT)
-    private val sticky = listOf(ctrl, alt)
+    val shift = StickyModifier(Keys.KEY_LEFTSHIFT)
+    private val sticky = listOf(ctrl, alt, shift)
 
     /** A key sent whole on its press because modifiers were latched; its release is already sent. */
     private var swallowUp: Int? = null

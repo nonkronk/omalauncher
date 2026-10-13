@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import dev.omalauncher.LauncherData
 import dev.omalauncher.linux.TerminalText
 import dev.omalauncher.ui.Corners
+import dev.omalauncher.ui.ExtraKeysConfig
 import dev.omalauncher.ui.LauncherStyle
 import dev.omalauncher.upgrade.Managed
 import dev.omalauncher.upgrade.Policy
@@ -133,7 +134,11 @@ class StyleStore(
     }
 
     /** defaults.toml, which always matches this launcher's settings. */
-    fun managed(): List<Managed> = listOf(Managed.text(File(dir, DEFAULTS), Policy.Owned) { StyleFile.defaultsText() })
+    fun managed(): List<Managed> =
+        listOf(
+            Managed.text(File(dir, DEFAULTS), Policy.Owned) { StyleFile.defaultsText() },
+            Managed.text(File(dir, EXTRA_KEYS), Policy.Seeded) { ExtraKeysConfig.DEFAULT_CONFIG_TEXT },
+        )
 
     private var watching: Job? = null
 
@@ -234,6 +239,7 @@ class StyleStore(
     companion object {
         const val FILE = "style.toml"
         const val DEFAULTS = "defaults.toml"
+        const val EXTRA_KEYS = "extra-keys.properties"
         const val ERRORS = "errors.txt"
 
         private const val SAVE_DELAY_MS = 400L

@@ -37,6 +37,9 @@ object LauncherData {
     /** style.toml and its defaults; see [dev.omalauncher.theme.StyleStore]. The guest sees ~/.config/omalauncher/style. */
     fun styleDir(context: Context) = File(context.filesDir, "style")
 
+    /** extra-keys.properties in the style dir; see [dev.omalauncher.ui.ExtraKeysStore]. */
+    fun extraKeysFile(context: Context) = File(styleDir(context), "extra-keys.properties")
+
     /** Manifest of the launcher-side [dev.omalauncher.upgrade.Provisioner]; the guest's is managed.json. */
     const val LAUNCHER_MANIFEST = "launcher-managed.json"
     const val GUEST_MANIFEST = "managed.json"
