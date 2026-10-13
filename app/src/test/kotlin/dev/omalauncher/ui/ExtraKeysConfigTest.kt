@@ -83,6 +83,19 @@ class ExtraKeysConfigTest {
     }
 
     @Test
+    fun differentiatesImplicitAndExplicitShiftInModifierMacros() {
+        val layout = ExtraKeysConfig.parse(
+            """extra-keys = [[{macro: "CTRL A"}, {macro: "CTRL SHIFT A"}, {macro: "ALT a"}]]"""
+        ).single()
+        assertEquals(listOf(Keys.KEY_LEFTCTRL), (layout[0] as Plain).actions!!.single().held)
+        assertEquals(
+            listOf(Keys.KEY_LEFTCTRL, Keys.KEY_LEFTSHIFT),
+            (layout[1] as Plain).actions!!.single().held,
+        )
+        assertEquals(listOf(Keys.KEY_LEFTALT), (layout[2] as Plain).actions!!.single().held)
+    }
+
+    @Test
     fun supportsStrictJsonQuotedStringsAndKeyAliases() {
         val layout = ExtraKeysConfig.parse(
             """[["ESC", {"key":"KEY_LEFT","display":"←","popup":"HOME"}],["TAB","CTRL","SHIFT"] ]"""
@@ -137,6 +150,6 @@ class ExtraKeysConfigTest {
         val sticky = layout.single()[0] as Sticky
         assertNotNull(sticky.popup)
         assertEquals(2, sticky.popup!!.strokes.size)
-        assertEquals(Keys.KEY_BACKSPACE, sticky.popup!!.strokes[1].code)
+        assertEquals(Keys.KEY_BACKSPACE, sticky.popup.strokes[1].code)
     }
 }
