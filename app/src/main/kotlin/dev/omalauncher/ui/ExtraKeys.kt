@@ -330,7 +330,13 @@ object ExtraKeysConfig {
             }
             if (mod != null) { if (mod !in pending) pending.add(mod); continue }
             val stroke = resolveStroke(token) ?: return emptyList()
-            strokes += stroke.copy(held = (pending + stroke.held).distinct())
+            // In named Ctrl/Alt chords, "CTRL A" denotes Ctrl+A, not Ctrl+Shift+A.
+            // Users can request the shifted variant explicitly with "CTRL SHIFT A".
+            val implicit = if (token.length == 1 && token[0].isLetter() &&
+                (Keys.KEY_LEFTCTRL in pending || Keys.KEY_LEFTALT in pending) &&
+                Keys.KEY_LEFTSHIFT !in pending
+            ) stroke.held.filterNot { it == Keys.KEY_LEFTSHIFT } else stroke.held
+            strokes += stroke.copy(held = (pending + implicit).distinct())
             pending.clear()
         }
         return if (pending.isEmpty()) strokes else emptyList()
