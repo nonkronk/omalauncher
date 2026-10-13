@@ -185,7 +185,7 @@ fun HomeScreen(
         snapshotFlow { imeTarget.getBottom(density) == 0 && terminals.keyboard?.wanted == true }.collect { terminals.keyboardLeaving = it }
     }
     var origin by remember { mutableStateOf(Offset.Zero) }
-    val extraKeys = terminals.active != null && extraKeysWanted()
+    val extraKeys = terminals.active != null && ExtraKeysState.layout.isNotEmpty() && extraKeysWanted()
     val side = homeSide()
     val turned = homeTurned()
     val sideRoom = sideWidth()
