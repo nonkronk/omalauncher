@@ -48,6 +48,43 @@ Hardware keyboard shortcuts: Super+Enter (terminal), Super+Space or
 Super+A (the bar), Super+1..9 (home pages) on the home screen; Super+Enter
 and Super+W (close) in Linux windows.
 
+## Configurable terminal extra keys
+
+The terminal's on-screen extra-key bar keeps the original two-row, eight-key
+layout unless you configure a replacement. Edit
+`~/.config/omalauncher/style/extra-keys.properties` (available inside
+the optional Arch guest); the launcher updates the layout when the file is
+saved. If the launcher file has no active `extra-keys` setting, an active
+setting in `~/.termux/termux.properties` is used as a fallback.
+
+Termux-style, single-quoted or unquoted key names and popup actions work:
+
+```properties
+extra-keys = [ \
+  [{key: ESC, popup: {macro: "CTRL f d", display: "tmux exit"}}, \
+   TAB, CTRL, ALT, {key: LEFT, popup: {macro: "CTRL LEFT", display: "Word ←"}}, DOWN, UP], \
+  ['/', '-', HOME, END, PGUP, PGDN, PASTE] \
+]
+```
+
+Touch a key to use its primary action, or swipe up and **release** to send
+its popup. While the swipe is selected, the keycap shows the popup label.
+A latched Ctrl, Alt or Shift is displayed next to the next key's label
+(⌃/⌥/⇧), and modifier keys indicate `NEXT` versus `LOCK`.
+Tap a modifier for the next key; long-press it to lock until tapped again.
+
+To hide the bar entirely, add:
+
+```properties
+extra-keys = []
+```
+
+Supported layouts have up to three rows and ten keys per row. Sequential
+macros (for example, Ctrl+F then D from `CTRL f d`) and multi-modifier
+chords are supported. This adopts Termux's matrix configuration **format**;
+Termux-specific launcher actions such as `KEYBOARD` are not supported
+Wayland key actions. Invalid edits leave the previous valid layout active.
+
 ## Building
 
 ```sh
