@@ -484,6 +484,7 @@ private fun PlainKey(key: Plain, bridge: KeyboardBridge, modifier: Modifier) {
     val density = LocalDensity.current
     var pressed by remember(key) { mutableStateOf(false) }
     var popupSelected by remember(key) { mutableStateOf(false) }
+    var confirmation by remember(key) { mutableStateOf<String?>(null) }
     val modifiers = modifierGlyphs(bridge)
 
     KeyCap(
@@ -494,6 +495,7 @@ private fun PlainKey(key: Plain, bridge: KeyboardBridge, modifier: Modifier) {
                     val down = awaitFirstDown()
                     pressed = true
                     popupSelected = false
+                    confirmation = null
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     val repeatJob = if (key.popup == null && key.repeats) {
                         launch {
@@ -526,8 +528,11 @@ private fun PlainKey(key: Plain, bridge: KeyboardBridge, modifier: Modifier) {
                             }
                         }
                         if (released && key.popup != null) {
-                            if (popupSelected) sendStrokes(bridge, key.popup.strokes)
-                            else sendPlain(bridge, key)
+                            if (popupSelected) {
+                                sendStrokes(bridge, key.popup.strokes)
+                                confirmation = key.popup.display
+                                launch { delay(220); confirmation = null }
+                            } else sendPlain(bridge, key)
                         }
                     } finally {
                         repeatJob?.cancel()
@@ -537,12 +542,12 @@ private fun PlainKey(key: Plain, bridge: KeyboardBridge, modifier: Modifier) {
                 }
             }
         },
-        fill = if (pressed) Palette.accent else Palette.surface,
+        fill = if (pressed || confirmation != null) Palette.accent else Palette.surface,
     ) {
-        val color = if (pressed) Palette.background else Palette.foreground
+        val color = if (pressed || confirmation != null) Palette.background else Palette.foreground
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             val popup = key.popup
-            val showPopup = popupSelected && popup != null
+            val showPopup = (popupSelected || confirmation != null) && popup != null
             val display = if (showPopup) popup!!.display else modifiers + key.label
             if (showPopup || modifiers.isNotEmpty() || key.arrow == null) {
                 BasicText(
@@ -571,6 +576,7 @@ private fun StickyKey(key: Sticky, sticky: StickyModifier, bridge: KeyboardBridg
     val density = LocalDensity.current
     val latch = sticky.latch
     var popupSelected by remember(key) { mutableStateOf(false) }
+    var confirmation by remember(key) { mutableStateOf<String?>(null) }
     KeyCap(
         modifier.pointerInput(sticky, key) {
             val threshold = with(density) { 16.dp.toPx() }
@@ -579,6 +585,7 @@ private fun StickyKey(key: Sticky, sticky: StickyModifier, bridge: KeyboardBridg
                     val down = awaitFirstDown()
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     popupSelected = false
+                    confirmation = null
                     var locked = false
                     val hold = launch {
                         delay(RepeatDelay)
@@ -607,7 +614,11 @@ private fun StickyKey(key: Sticky, sticky: StickyModifier, bridge: KeyboardBridg
                             }
                         }
                         if (released) {
-                            if (popupSelected && key.popup != null) sendStrokes(bridge = bridge, strokes = key.popup.strokes)
+                            if (popupSelected && key.popup != null) {
+                                sendStrokes(bridge, key.popup.strokes)
+                                confirmation = key.popup.display
+                                launch { delay(220); confirmation = null }
+                            }
                             else if (!locked) sticky.latch = if (sticky.latch == Latch.Off) Latch.Once else Latch.Off
                         }
                     } finally {
@@ -617,18 +628,18 @@ private fun StickyKey(key: Sticky, sticky: StickyModifier, bridge: KeyboardBridg
                 }
             }
         },
-        fill = if (popupSelected || latch == Latch.Locked) Palette.accent else Palette.surface,
+        fill = if (popupSelected || confirmation != null || latch == Latch.Locked) Palette.accent else Palette.surface,
         outline = if (latch == Latch.Once) Palette.accent else null,
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            val color = if (latch == Latch.Locked || popupSelected) Palette.background else if (latch == Latch.Once) Palette.accent else Palette.foreground
-            BasicText(if (popupSelected) key.popup?.display ?: key.label else key.label, style = Mono.copy(color = color), maxLines = 1)
-            if (latch != Latch.Off && !popupSelected) {
+            val color = if (latch == Latch.Locked || popupSelected || confirmation != null) Palette.background else if (latch == Latch.Once) Palette.accent else Palette.foreground
+            BasicText(if (popupSelected || confirmation != null) key.popup?.display ?: key.label else key.label, style = Mono.copy(color = color), maxLines = 1)
+            if (latch != Latch.Off && !popupSelected && confirmation == null) {
                 BasicText(if (latch == Latch.Locked) "LOCK" else "NEXT",
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp),
                     style = Mono.copy(color = color, fontSize = 7.sp))
             }
-            if (key.popup != null && !popupSelected) {
+            if (key.popup != null && !popupSelected && confirmation == null) {
                 BasicText("↗" + key.popup.display, modifier = Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 2.dp),
                     style = Mono.copy(color = Palette.accent, fontSize = 8.sp), maxLines = 1)
             }
