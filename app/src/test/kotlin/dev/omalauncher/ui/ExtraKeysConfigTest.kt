@@ -2,136 +2,141 @@ package dev.omalauncher.ui
 
 import dev.omalauncher.wayland.Keys
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExtraKeysConfigTest {
     @Test
-    fun parsesDefaultWhenEmpty() {
+    fun keepsOriginalLayoutWithoutOptIn() {
+        assertFalse(ExtraKeysConfig.hasLayoutProperty(ExtraKeysConfig.DEFAULT_CONFIG_TEXT))
         assertEquals(DefaultLayout, ExtraKeysConfig.parse(""))
-        assertEquals(DefaultLayout, ExtraKeysConfig.parse("   "))
+        assertEquals(DefaultLayout, ExtraKeysConfig.parse(ExtraKeysConfig.DEFAULT_CONFIG_TEXT))
+        assertEquals(2, DefaultLayout.size)
+        assertEquals(8, DefaultLayout[0].size)
+        assertEquals(8, DefaultLayout[1].size)
+        assertEquals("copy", (DefaultLayout[0].last() as Plain).label)
+        assertEquals("paste", (DefaultLayout[1].last() as Plain).label)
     }
 
     @Test
-    fun parsesTermuxPropertiesFormat() {
-        val termuxConfig =
-            """
+    fun emptyMatrixDisablesAllKeysInsteadOfReinstatingDefaults() {
+        assertTrue(ExtraKeysConfig.parse("extra-keys = []").isEmpty())
+        assertTrue(ExtraKeysConfig.parse("[]").isEmpty())
+        assertEquals(emptyList<List<ExtraKey>>(), ExtraKeysConfig.parseOrNull("extra-keys = []"))
+    }
+
+    @Test
+    fun parsesTermuxStyleMultilineMatrixAndCustomLabels() {
+        val config = """
+            # extra-keys = [[PGDN]] is only an example
             extra-keys = [ \
               ['ESC', '/', '-', {key: HOME, popup: {macro: "CTRL A", display: "⇤ FIRST"}}, 'UP', {key: END, popup: {macro: "CTRL E", display: "LAST ⇥"}}, 'PGUP'], \
-              [{key: TAB, popup: {macro: "ESC [ Z", display: "⇧TAB"}}, \
-               'CTRL', \
-               'ALT', \
-               {key: LEFT, popup: {macro: "CTRL LEFT", display: "WORD ←"}}, \
-               'DOWN', \
-               {key: RIGHT, popup: {macro: "CTRL RIGHT", display: "WORD →"}}, \
-               {key: PGDN, popup: {macro: "CTRL j", display: "⇧ENTER"}} \
-              ] \
+              [{key: TAB, popup: {macro: "ESC [ Z", display: "⇧TAB"}}, CTRL, ALT, \
+               {key: LEFT, popup: {macro: "CTRL LEFT", display: "WORD ←"}}, 'DOWN', \
+               {key: RIGHT, popup: {macro: "CTRL RIGHT", display: "WORD →"}}, 'PGDN'] \
             ]
-            """.trimIndent()
-
-        val layout = ExtraKeysConfig.parse(termuxConfig)
+        """.trimIndent()
+        val layout = ExtraKeysConfig.parse(config)
         assertEquals(2, layout.size)
         assertEquals(7, layout[0].size)
         assertEquals(7, layout[1].size)
-
-        // Check Row 1 keys
-        val esc = layout[0][0] as Plain
-        assertEquals(Keys.KEY_ESC, esc.code)
-
-        val slash = layout[0][1] as Plain
-        assertEquals(Keys.KEY_SLASH, slash.code)
-
-        val minus = layout[0][2] as Plain
-        assertEquals(Keys.KEY_MINUS, minus.code)
-
-        val home = layout[0][3] as Plain
-        assertEquals(Keys.KEY_HOME, home.code)
-        assertNotNull(home.popup)
-        assertEquals("⇤", home.popup?.display)
-        assertEquals(30 /* KEY_A */, home.popup?.code)
-        assertEquals(Keys.KEY_LEFTCTRL, home.popup?.held)
-
-        val up = layout[0][4] as Plain
-        assertEquals(Keys.KEY_UP, up.code)
-        assertTrue(up.repeats)
-        assertEquals(0f, up.arrow)
-
-        val end = layout[0][5] as Plain
-        assertEquals(Keys.KEY_END, end.code)
-        assertNotNull(end.popup)
-        assertEquals("⇥", end.popup?.display)
-        assertEquals(18 /* KEY_E */, end.popup?.code)
-        assertEquals(Keys.KEY_LEFTCTRL, end.popup?.held)
-
-        val pgup = layout[0][6] as Plain
-        assertEquals(Keys.KEY_PAGEUP, pgup.code)
-        assertTrue(pgup.repeats)
-
-        // Check Row 2 keys
-        val tab = layout[1][0] as Plain
-        assertEquals(Keys.KEY_TAB, tab.code)
-        assertNotNull(tab.popup)
-        assertEquals("⇧TAB", tab.popup?.display)
-        assertEquals(Keys.KEY_TAB, tab.popup?.code)
-        assertEquals(Keys.KEY_LEFTSHIFT, tab.popup?.held)
-
-        val ctrl = layout[1][1] as Sticky
-        assertEquals("ctrl", ctrl.label)
-
-        val alt = layout[1][2] as Sticky
-        assertEquals("alt", alt.label)
-
-        val left = layout[1][3] as Plain
-        assertEquals(Keys.KEY_LEFT, left.code)
-        assertTrue(left.repeats)
-        assertEquals(-90f, left.arrow)
-        assertNotNull(left.popup)
-        assertEquals("W←", left.popup?.display)
-        assertEquals(Keys.KEY_LEFT, left.popup?.code)
-        assertEquals(Keys.KEY_LEFTCTRL, left.popup?.held)
-
-        val down = layout[1][4] as Plain
-        assertEquals(Keys.KEY_DOWN, down.code)
-        assertTrue(down.repeats)
-        assertEquals(180f, down.arrow)
-
-        val right = layout[1][5] as Plain
-        assertEquals(Keys.KEY_RIGHT, right.code)
-        assertTrue(right.repeats)
-        assertEquals(90f, right.arrow)
-        assertNotNull(right.popup)
-        assertEquals("W→", right.popup?.display)
-        assertEquals(Keys.KEY_RIGHT, right.popup?.code)
-        assertEquals(Keys.KEY_LEFTCTRL, right.popup?.held)
-
-        val pgdn = layout[1][6] as Plain
-        assertEquals(Keys.KEY_PAGEDOWN, pgdn.code)
-        assertTrue(pgdn.repeats)
-        assertNotNull(pgdn.popup)
-        assertEquals("⇧⏎", pgdn.popup?.display)
-        assertEquals(36 /* KEY_J */, pgdn.popup?.code)
-        assertEquals(Keys.KEY_LEFTCTRL, pgdn.popup?.held)
-    }
-
-    @Test
-    fun parsesRawJsonArray() {
-        val json = """[["ESC", "/"], ["TAB", "CTRL"]]"""
-        val layout = ExtraKeysConfig.parse(json)
-        assertEquals(2, layout.size)
-        assertEquals(2, layout[0].size)
-        assertEquals(2, layout[1].size)
-
-        assertEquals(Keys.KEY_ESC, (layout[0][0] as Plain).code)
         assertEquals(Keys.KEY_SLASH, (layout[0][1] as Plain).code)
-        assertEquals(Keys.KEY_TAB, (layout[1][0] as Plain).code)
+        assertEquals(Keys.KEY_HOME, (layout[0][3] as Plain).code)
+        val homePopup = (layout[0][3] as Plain).popup!!
+        assertEquals("⇤ FIRST", homePopup.display)
+        assertEquals(listOf(Keys.KEY_LEFTCTRL), homePopup.strokes.single().held)
+        assertEquals(Keys.forChar('A')!!.first, homePopup.strokes.single().code)
+        assertEquals(listOf(Keys.KEY_LEFTSHIFT), (layout[1][0] as Plain).popup!!.strokes.single().held)
         assertTrue(layout[1][1] is Sticky)
+        assertTrue(layout[1][2] is Sticky)
+        assertEquals(Keys.KEY_LEFT, (layout[1][3] as Plain).popup!!.strokes.single().code)
     }
 
     @Test
-    fun handlesBadSyntaxGracefully() {
-        val garbage = "this is not valid json or properties at all {{{ 123"
-        val layout = ExtraKeysConfig.parse(garbage)
-        assertEquals(DefaultLayout, layout)
+    fun parsesActualTermuxSequentialMacroInsteadOfLastKeyOnly() {
+        val layout = ExtraKeysConfig.parse(
+            """extra-keys = [[{key: ESC, popup: {macro: "CTRL f d", display: "tmux exit"}}]]"""
+        )
+        val popup = (layout.single().single() as Plain).popup!!
+        assertEquals("tmux exit", popup.display)
+        assertEquals(2, popup.strokes.size)
+        assertEquals(Keys.forChar('f')!!.first, popup.strokes[0].code)
+        assertEquals(listOf(Keys.KEY_LEFTCTRL), popup.strokes[0].held)
+        assertEquals(Keys.forChar('d')!!.first, popup.strokes[1].code)
+        assertTrue(popup.strokes[1].held.isEmpty())
+    }
+
+    @Test
+    fun parsesMultiModifierChordAndTopLevelMacro() {
+        val layout = ExtraKeysConfig.parse(
+            """extra-keys = [[{macro: "ALT SHIFT LEFT", display: "select"}, {key: TAB, popup: {macro: "CTRL f d"}}]]"""
+        )
+        val macro = layout.single()[0] as Plain
+        assertEquals("select", macro.label)
+        assertEquals(1, macro.actions!!.size)
+        assertEquals(Keys.KEY_LEFT, macro.actions.single().code)
+        assertEquals(listOf(Keys.KEY_LEFTALT, Keys.KEY_LEFTSHIFT), macro.actions.single().held)
+        assertEquals(2, (layout.single()[1] as Plain).popup!!.strokes.size)
+    }
+
+    @Test
+    fun supportsStrictJsonQuotedStringsAndKeyAliases() {
+        val layout = ExtraKeysConfig.parse(
+            """[["ESC", {"key":"KEY_LEFT","display":"←","popup":"HOME"}],["TAB","CTRL","SHIFT"] ]"""
+        )
+        assertEquals(2, layout.size)
+        val left = layout[0][1] as Plain
+        assertEquals(Keys.KEY_LEFT, left.code)
+        assertEquals("←", left.label)
+        assertEquals(Keys.KEY_HOME, left.popup!!.strokes.single().code)
+        assertTrue(layout[1][1] is Sticky)
+        assertTrue(layout[1][2] is Sticky)
+    }
+
+    @Test
+    fun quotedTextIsNeverRewrittenByLooseJsonNormalizer() {
+        val config = """extra-keys = [[{key: ESC, display: 'don\'t [stop], CTRL: "ok" #tag'}]]"""
+        val layout = ExtraKeysConfig.parse(config)
+        assertEquals("""don't [stop], CTRL: "ok" #tag""", (layout.single().single() as Plain).label)
+    }
+
+    @Test
+    fun preservesShiftedCharactersAndFKeys() {
+        val layout = ExtraKeysConfig.parse("""extra-keys = [['/', ':', 'F1', 'F12', 'COPY', 'PASTE']]""").single()
+        assertEquals(Keys.KEY_SLASH, (layout[0] as Plain).code)
+        assertEquals(listOf(Keys.KEY_LEFTSHIFT), (layout[1] as Plain).actions?.single()?.held
+            ?: listOfNotNull((layout[1] as Plain).held))
+        assertEquals(59, (layout[2] as Plain).code)
+        assertEquals(88, (layout[3] as Plain).code)
+        assertEquals(Keys.KEY_LEFTCTRL, (layout[4] as Plain).held)
+        assertEquals(Keys.KEY_LEFTSHIFT, (layout[5] as Plain).held)
+    }
+
+    @Test
+    fun invalidAndOversizedMatricesAreRejectedWithoutHidingExistingKeys() {
+        assertNull(ExtraKeysConfig.parseOrNull("extra-keys = [[ESC"))
+        assertNull(ExtraKeysConfig.parseOrNull("extra-keys = [[ESC, KEYBOARD]]"))
+        assertNull(ExtraKeysConfig.parseOrNull("extra-keys = [[ESC], [TAB], [CTRL], [ALT]]"))
+        val wide = (1..11).joinToString(",") { "ESC" }
+        assertNull(ExtraKeysConfig.parseOrNull("extra-keys = [[$wide]]"))
+        assertEquals(DefaultLayout, ExtraKeysConfig.parse("extra-keys = [[ESC"))
+        assertNull(ExtraKeysConfig.parseOrNull("this is not valid"))
+    }
+
+    @Test
+    fun ignoresCommentedOutConfigurationAndSupportsPopupOnModifiers() {
+        val config = """
+            # extra-keys = [[ESC]]
+            extra-keys = [[{key: CTRL, popup: {macro: "CTRL f BKSP", display: "tmux back"}}, TAB]]
+        """.trimIndent()
+        val layout = ExtraKeysConfig.parse(config)
+        assertEquals(2, layout.single().size)
+        val sticky = layout.single()[0] as Sticky
+        assertNotNull(sticky.popup)
+        assertEquals(2, sticky.popup!!.strokes.size)
+        assertEquals(Keys.KEY_BACKSPACE, sticky.popup!!.strokes[1].code)
     }
 }
