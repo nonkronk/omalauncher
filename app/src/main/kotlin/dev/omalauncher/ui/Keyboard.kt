@@ -101,6 +101,16 @@ class KeyboardBridge(
         held?.let { key(it, false) }
     }
 
+    /** Send a genuine multi-modifier chord without pressing a latched modifier twice. */
+    fun chord(code: Int, modifiers: List<Int>) = withLatched {
+        val latchedCodes = sticky.filter { it.latch != Latch.Off }.map { it.code }.toSet()
+        val extra = modifiers.distinct().filterNot { it in latchedCodes }
+        extra.forEach { key(it, true) }
+        key(code, true)
+        key(code, false)
+        extra.asReversed().forEach { key(it, false) }
+    }
+
     /** Drops every latch, so a modifier left on doesn't surprise the next keystroke. */
     fun clearLatches() = sticky.forEach { it.latch = Latch.Off }
 
