@@ -82,10 +82,11 @@ class KeyboardBridge(
             }
             val (code, shift) = mapped
             withLatched {
-                if (shift) key(Keys.KEY_LEFTSHIFT, true)
+                val addShift = shift && this.shift.latch == Latch.Off
+                if (addShift) key(Keys.KEY_LEFTSHIFT, true)
                 key(code, true)
                 key(code, false)
-                if (shift) key(Keys.KEY_LEFTSHIFT, false)
+                if (addShift) key(Keys.KEY_LEFTSHIFT, false)
             }
         }
     }
@@ -94,12 +95,7 @@ class KeyboardBridge(
     fun tap(
         code: Int,
         held: Int? = null,
-    ) = withLatched {
-        held?.let { key(it, true) }
-        key(code, true)
-        key(code, false)
-        held?.let { key(it, false) }
-    }
+    ) = chord(code, listOfNotNull(held))
 
     /** Send a genuine multi-modifier chord without pressing a latched modifier twice. */
     fun chord(code: Int, modifiers: List<Int>) = withLatched {
