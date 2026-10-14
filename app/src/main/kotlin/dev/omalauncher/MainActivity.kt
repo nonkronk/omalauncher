@@ -107,24 +107,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Pressing Home while already home closes overlays, or scrolls to the first page if already at home. */
+    /** Pressing Home closes overlays and scrolls to the first page. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        val isAtHome = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
-        val hadOverlay =
-            state.homeCovered ||
-            state.drawer.value > 0.05f ||
-            runtime.widgets.openScreen != null ||
-            state.editing != null ||
-            runtime.terminals.active != null
         state.close()
         state.closeScreens()
         runtime.widgets.openScreen = null
         state.editing = null
         runtime.terminals.deactivate()
-        if (isAtHome && !hadOverlay) {
-            state.requestedPage = 0
-        }
+        state.scrollToPage(0)
         handleDebugExec(intent)
         handleSharedWidget(intent)
     }
@@ -157,7 +148,7 @@ class MainActivity : ComponentActivity() {
             KeyEvent.KEYCODE_ENTER -> runtime.terminal(null, "Terminal")
             KeyEvent.KEYCODE_SPACE -> state.toggle()
             KeyEvent.KEYCODE_A -> state.promptRequest = PromptRequest.Type
-            in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> state.requestedPage = keyCode - KeyEvent.KEYCODE_1
+            in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> state.scrollToPage(keyCode - KeyEvent.KEYCODE_1)
             else -> return false
         }
         return true
