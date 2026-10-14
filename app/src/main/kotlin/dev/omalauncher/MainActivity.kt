@@ -107,14 +107,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Pressing Home while already home closes the menu, like other launchers. */
+    /** Pressing Home while already home closes overlays, or scrolls to the first page if already at home. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        val isAtHome = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        val hadOverlay =
+            state.homeCovered ||
+            state.drawer.value > 0.05f ||
+            runtime.widgets.openScreen != null ||
+            state.editing != null ||
+            runtime.terminals.active != null
         state.close()
         state.closeScreens()
         runtime.widgets.openScreen = null
         state.editing = null
         runtime.terminals.deactivate()
+        if (isAtHome && !hadOverlay) {
+            state.requestedPage = 0
+        }
         handleDebugExec(intent)
         handleSharedWidget(intent)
     }
