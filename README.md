@@ -48,6 +48,35 @@ Hardware keyboard shortcuts: Super+Enter (terminal), Super+Space or
 Super+A (the bar), Super+1..9 (home pages) on the home screen; Super+Enter
 and Super+W (close) in Linux windows.
 
+The keys above the soft keyboard in terminals are `terminal.extra-keys` in
+`~/.config/omalauncher/style/style.toml`, in Termux's extra-keys format:
+
+```toml
+[terminal]
+extra-keys = '[[ESC, TAB, CTRL, ALT, {key: LEFT, popup: {macro: "ALT b", display: "word"}}, DOWN, UP, RIGHT], [/, -, HOME, END, PGUP, PGDN, PASTE]]'
+```
+
+Tap ctrl, alt or shift for the next key, or hold it to lock it; modifier
+keys show NEXT or LOCK, and the next key shows its active chord (⌃/⌥/⇧).
+Swipe a key up and release to send its popup, with the chosen action shown
+on the keycap and a brief confirmation after release. Dragging off to the
+side cancels the gesture. A key with a popup doesn't repeat. A physical
+keyboard key with a one-shot modifier sends one complete chord per press;
+holding it won't accidentally type unmodified repeated characters.
+
+A macro sends keys in order, each with the modifiers named before it:
+`CTRL f d` is Ctrl+F, then D. An escaped `\n` in a macro sends Enter
+(for example, `":wq\n"` sends the Vim save-and-quit command).
+The named Termux keys BACKSLASH, QUOTE and APOSTROPHE produce their characters.
+For reverse tab use BACKTAB (also BTAB, SHIFTTAB, or ISO_LEFT_TAB), a
+"SHIFT TAB" macro, or the "ESC [ Z" macro; these send native Shift+Tab
+rather than typing an escape sequence. Quoted \033[Z, \e[Z, and \u001b[Z
+spellings are supported too, including double-backslash forms. Unrecognized
+backslash escapes are preserved, not silently stripped. Up to three rows of
+ten; '[]' hides the bar. Termux's own
+actions (KEYBOARD, DRAWER) aren't keys here, and what can't be read shows in
+the banner on home while the last good layout stays.
+
 ## Building
 
 ```sh
