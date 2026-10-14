@@ -96,8 +96,14 @@ class LauncherState {
     /** Asks the prompt bar to start typing (Super+A) or to send (the ask row); consumed by the bar. */
     var promptRequest by mutableStateOf<PromptRequest?>(null)
 
-    /** Home page to scroll to (e.g. from Super+number); consumed by the pager. */
-    var requestedPage by mutableStateOf<Int?>(null)
+    /** Home page to scroll to (e.g. from Super+number or Home press); consumed by the pager. */
+    var requestedPage by mutableIntStateOf(0)
+    var requestedPageTrigger by mutableIntStateOf(0)
+
+    fun scrollToPage(page: Int) {
+        requestedPage = page
+        requestedPageTrigger++
+    }
 
     /** A composition scope: animations need its frame clock. Null until the UI is composed. */
     private var composeScope: CoroutineScope? = null

@@ -141,9 +141,11 @@ fun HomeScreen(
     // Its shell exited, or the app lost focus: the soft keyboard goes too.
     val typing = terminals.active != null
     LaunchedEffect(typing) { if (!typing) terminals.keyboard?.hide() }
-    LaunchedEffect(state.requestedPage) {
-        state.requestedPage?.let { if (it < pageNumbers.size) pager.animateScrollToPage(it / per) }
-        state.requestedPage = null
+    LaunchedEffect(state.requestedPageTrigger) {
+        if (state.requestedPageTrigger > 0) {
+            val page = state.requestedPage
+            if (page in 0 until pageNumbers.size) pager.animateScrollToPage(page / per)
+        }
     }
 
     fun openMenu(item: HomeItem?) {

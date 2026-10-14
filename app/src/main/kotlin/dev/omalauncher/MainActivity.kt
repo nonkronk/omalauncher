@@ -107,13 +107,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Pressing Home while already home closes the menu, like other launchers. */
+    /** Pressing Home closes overlays and scrolls to the first page. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         state.close()
         state.closeScreens()
         runtime.widgets.openScreen = null
         state.editing = null
+        runtime.terminals.deactivate()
+        state.scrollToPage(0)
         handleDebugExec(intent)
         handleSharedWidget(intent)
     }
@@ -146,7 +148,7 @@ class MainActivity : ComponentActivity() {
             KeyEvent.KEYCODE_ENTER -> runtime.terminal(null, "Terminal")
             KeyEvent.KEYCODE_SPACE -> state.toggle()
             KeyEvent.KEYCODE_A -> state.promptRequest = PromptRequest.Type
-            in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> state.requestedPage = keyCode - KeyEvent.KEYCODE_1
+            in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> state.scrollToPage(keyCode - KeyEvent.KEYCODE_1)
             else -> return false
         }
         return true
