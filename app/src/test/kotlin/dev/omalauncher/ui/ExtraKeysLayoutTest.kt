@@ -94,15 +94,15 @@ class ExtraKeysLayoutTest {
     @Test fun codingAgentLayoutSendsModifiedEnterTabAndWordNavigation() {
         // Same complete config as the README example, using actual modifier-key chords.
         val row = parse(
-            """[[ESC, CTRL, ALT, SHIFT, {macro: "SHIFT ENTER", display: "newline"}, {macro: "SHIFT TAB", display: "backtab"}, {macro: "ALT b", display: "prev word"}, {macro: "ALT f", display: "next word"}], [TAB, ENTER, LEFT, RIGHT, UP, DOWN, BKSP, PASTE]]""",
+            """[[ESC, CTRL, ALT, SHIFT, {macro: "SHIFT ENTER", display: "S↵"}, {macro: "SHIFT TAB", display: "S⇤"}, {macro: "ALT b", display: "←word"}, {macro: "ALT f", display: "word→"}], [TAB, ENTER, LEFT, RIGHT, UP, DOWN, BKSP, PASTE]]""",
         )
         assertEquals(2, row.size)
         assertEquals(8, row[0].size)
         assertEquals(8, row[1].size)
-        assertEquals("newline", row[0][4].label)
-        assertEquals("backtab", row[0][5].label)
-        assertEquals("prev word", row[0][6].label)
-        assertEquals("next word", row[0][7].label)
+        assertEquals("S↵", row[0][4].label)
+        assertEquals("S⇤", row[0][5].label)
+        assertEquals("←word", row[0][6].label)
+        assertEquals("word→", row[0][7].label)
         assertEquals(
             listOf(
                 Stroke(Keys.KEY_ENTER, listOf(shift)),

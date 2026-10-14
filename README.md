@@ -61,7 +61,7 @@ navigation keys avoids having to latch a modifier for each command:
 
 ```toml
 [terminal]
-extra-keys = '[[ESC, CTRL, ALT, SHIFT, {macro: "SHIFT ENTER", display: "newline"}, {macro: "SHIFT TAB", display: "backtab"}, {macro: "ALT b", display: "prev word"}, {macro: "ALT f", display: "next word"}], [TAB, ENTER, LEFT, RIGHT, UP, DOWN, BKSP, PASTE]]'
+extra-keys = '[[ESC, CTRL, ALT, SHIFT, {macro: "SHIFT ENTER", display: "S↵"}, {macro: "SHIFT TAB", display: "S⇤"}, {macro: "ALT b", display: "←word"}, {macro: "ALT f", display: "word→"}], [TAB, ENTER, LEFT, RIGHT, UP, DOWN, BKSP, PASTE]]'
 ```
 
 The shortcuts send real key chords, not typed escape characters. Shift+Enter
