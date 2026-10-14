@@ -32,7 +32,10 @@ class ExtraKeysLayoutTest {
     }
 
     @Test fun theDefaultIsTermuxsTwoRowsWithTheClipboardKeys() {
-        assertEquals(ExtraKeysLayout.Default, parse("[[ESC, /, -, HOME, UP, END, PGUP, COPY], [TAB, CTRL, ALT, LEFT, DOWN, RIGHT, PGDN, PASTE]]"))
+        assertEquals(
+            ExtraKeysLayout.Default,
+            parse("[[ESC, /, -, HOME, UP, END, PGUP, COPY], [TAB, CTRL, ALT, LEFT, DOWN, RIGHT, PGDN, PASTE]]"),
+        )
         assertSame(ExtraKeysLayout.Default, ExtraKeysLayout.of(null))
     }
 
@@ -45,7 +48,10 @@ class ExtraKeysLayoutTest {
     @Test fun namesQuotedEitherWayOrBareInAnyCase() {
         val row = parse("""[['ESC', "tab", Home, pgdn, F5, F12, del, '"']]""")[0]
         assertEquals(listOf("esc", "tab", "home", "pgdn", "f5", "f12", "del", "\""), row.map { it.label })
-        assertEquals(listOf(Keys.KEY_ESC, Keys.KEY_TAB, Keys.KEY_HOME, Keys.KEY_PAGEDOWN, 63, 88, Keys.KEY_DELETE), row.take(7).map { (it as Plain).strokes.single().code })
+        assertEquals(
+            listOf(Keys.KEY_ESC, Keys.KEY_TAB, Keys.KEY_HOME, Keys.KEY_PAGEDOWN, 63, 88, Keys.KEY_DELETE),
+            row.take(7).map { (it as Plain).strokes.single().code },
+        )
         assertEquals(listOf(shift), (row[7] as Plain).strokes.single().held)
     }
 
@@ -63,7 +69,10 @@ class ExtraKeysLayoutTest {
         val popup = esc.popup!!
         assertEquals("tmux exit", popup.label)
         // A sequence: Ctrl+F, then D on its own.
-        assertEquals(listOf(Keys.forChar('f')!!.first to listOf(ctrl), Keys.forChar('d')!!.first to emptyList<Int>()), popup.strokes.map { it.code to it.held })
+        assertEquals(
+            listOf(Keys.forChar('f')!!.first to listOf(ctrl), Keys.forChar('d')!!.first to emptyList<Int>()),
+            popup.strokes.map { it.code to it.held },
+        )
         // A key with a popup waits for its release, so it doesn't repeat.
         assertTrue(!plain("[[{key: LEFT, popup: HOME}]]").repeats)
         assertEquals("home", plain("[[{key: LEFT, popup: HOME}]]").popup!!.label.lowercase())

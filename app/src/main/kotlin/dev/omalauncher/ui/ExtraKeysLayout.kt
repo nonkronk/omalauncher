@@ -115,7 +115,11 @@ object ExtraKeysLayout {
     /** Termux's keys that act on its own app rather than send anything. */
     private val TERMUX_ACTIONS = setOf("KEYBOARD", "DRAWER", "SCROLL", "FN")
 
-    private val REPEATS = setOf("UP", "DOWN", "LEFT", "RIGHT", "PGUP", "PAGEUP", "PAGE_UP", "PGDN", "PAGEDOWN", "PAGE_DOWN", "BKSP", "BACKSPACE", "DEL", "DELETE")
+    private val REPEATS = setOf(
+        "UP", "DOWN", "LEFT", "RIGHT",
+        "PGUP", "PAGEUP", "PAGE_UP", "PGDN", "PAGEDOWN", "PAGE_DOWN",
+        "BKSP", "BACKSPACE", "DEL", "DELETE",
+    )
     private val ARROWS = mapOf("UP" to 0f, "DOWN" to 180f, "LEFT" to -90f, "RIGHT" to 90f)
 
     private const val STRUCTURE = "[]{}:,"

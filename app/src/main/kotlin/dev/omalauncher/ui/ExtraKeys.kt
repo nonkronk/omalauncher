@@ -280,7 +280,12 @@ private fun KeyLabel(
     color: Color,
 ) {
     val style = Mono.copy(color = color)
-    BasicText(text, style = if (text.length > 4) style.copy(fontSize = 10.sp) else style, maxLines = 1, softWrap = false)
+    BasicText(
+        text,
+        style = if (text.length > 4) style.copy(fontSize = 10.sp) else style,
+        maxLines = 1,
+        softWrap = false,
+    )
 }
 
 /** The popup's label in the key's corner, so it's found without trying every key. */
@@ -289,7 +294,13 @@ private fun BoxScope.PopupHint(
     popup: Popup,
     color: Color,
 ) {
-    BasicText(popup.label, Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 3.dp), style = Mono.copy(color = color, fontSize = 7.sp), maxLines = 1, softWrap = false)
+    BasicText(
+        popup.label,
+        Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 3.dp),
+        style = Mono.copy(color = color, fontSize = 7.sp),
+        maxLines = 1,
+        softWrap = false,
+    )
 }
 
 @Composable
@@ -328,16 +339,16 @@ private suspend fun AwaitPointerEventScope.release(
         val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: return Release.Cancelled
         if (change.isConsumed) return Release.Cancelled
         val decision = extraKeyGestureStep(
-            change.position.x,
-            change.position.y,
-            down.position.y,
-            size.width.toFloat(),
-            size.height.toFloat(),
-            extendedTouchPadding.width,
-            extendedTouchPadding.height,
-            distance,
-            swipes(),
-            change.pressed,
+            x = change.position.x,
+            y = change.position.y,
+            downY = down.position.y,
+            width = size.width.toFloat(),
+            height = size.height.toFloat(),
+            paddingX = extendedTouchPadding.width,
+            paddingY = extendedTouchPadding.height,
+            swipeDistance = distance,
+            canSwipe = swipes(),
+            pressed = change.pressed,
         )
         // Check cancellation before selecting or dispatching a popup. Even an already
         // selected upward swipe must cancel if the finger moves extremely far sideways.
@@ -355,7 +366,10 @@ private suspend fun AwaitPointerEventScope.release(
 }
 
 /** Pure decision used by the pointer handler and regression tests, including release-frame movement. */
-internal data class ExtraKeyGestureStep(val selected: Boolean, val release: Release?)
+internal data class ExtraKeyGestureStep(
+    val selected: Boolean,
+    val release: Release?,
+)
 
 internal fun extraKeyGestureStep(
     x: Float,

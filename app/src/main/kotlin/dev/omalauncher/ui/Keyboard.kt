@@ -46,8 +46,10 @@ class KeyboardBridge(
             Mod.Shift -> shift
         }
 
-    /** A latched physical key was sent as a complete press, so its later Android release is swallowed.
-     * Keep all outstanding codes, not just the last one: hardware keyboards can overlap key presses. */
+    /**
+     * A latched physical key was sent as a complete press, so its later Android release is swallowed.
+     * Keep all outstanding codes, not just the last one: hardware keyboards can overlap key presses.
+     */
     private val swallowUps = HashSet<Int>()
 
     fun handle(event: KeyEvent): Boolean {
