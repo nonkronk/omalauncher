@@ -56,6 +56,20 @@ The keys above the soft keyboard in terminals are `terminal.extra-keys` in
 extra-keys = '[[ESC, TAB, CTRL, ALT, {key: LEFT, popup: {macro: "ALT b", display: "word"}}, DOWN, UP, RIGHT], [/, -, HOME, END, PGUP, PGDN, PASTE]]'
 ```
 
+For coding agents, a layout with dedicated multiline, reverse-tab and word
+navigation keys avoids having to latch a modifier for each command:
+
+```toml
+[terminal]
+extra-keys = '[[ESC, CTRL, ALT, SHIFT, {macro: "SHIFT ENTER", display: "newline"}, {macro: "SHIFT TAB", display: "backtab"}, {macro: "ALT b", display: "prev word"}, {macro: "ALT f", display: "next word"}], [TAB, ENTER, LEFT, RIGHT, UP, DOWN, BKSP, PASTE]]'
+```
+
+The shortcuts send real key chords, not typed escape characters. Shift+Enter
+needs the terminal and application to support modified Enter (foot and coding
+agents supporting the Kitty keyboard protocol do); Alt+B and Alt+F move by
+words in readline-style shells and in Pi's editor. The plain Tab, Enter and
+arrow keys remain available in the second row.
+
 Tap ctrl, alt or shift for the next key, or hold it to lock it; modifier
 keys show NEXT or LOCK, and the next key shows its active chord (⌃/⌥/⇧).
 Swipe a key up and release to send its popup, with the chosen action shown

@@ -91,6 +91,46 @@ class ExtraKeysLayoutTest {
         assertEquals(listOf(shift), strokes[5].held)
     }
 
+    @Test fun codingAgentLayoutSendsModifiedEnterTabAndWordNavigation() {
+        // Same complete config as the README example, using actual modifier-key chords.
+        val row = parse(
+            """[[ESC, CTRL, ALT, SHIFT, {macro: "SHIFT ENTER", display: "newline"}, {macro: "SHIFT TAB", display: "backtab"}, {macro: "ALT b", display: "prev word"}, {macro: "ALT f", display: "next word"}], [TAB, ENTER, LEFT, RIGHT, UP, DOWN, BKSP, PASTE]]""",
+        )
+        assertEquals(2, row.size)
+        assertEquals(8, row[0].size)
+        assertEquals(8, row[1].size)
+        assertEquals("newline", row[0][4].label)
+        assertEquals("backtab", row[0][5].label)
+        assertEquals("prev word", row[0][6].label)
+        assertEquals("next word", row[0][7].label)
+        assertEquals(
+            listOf(
+                Stroke(Keys.KEY_ENTER, listOf(shift)),
+                Stroke(Keys.KEY_TAB, listOf(shift)),
+                Stroke(Keys.forChar('b')!!.first, listOf(alt)),
+                Stroke(Keys.forChar('f')!!.first, listOf(alt)),
+            ),
+            row[0].drop(4).map { (it as Plain).strokes.single() },
+        )
+        assertEquals(Keys.KEY_ENTER, (row[1][1] as Plain).strokes.single().code)
+        assertEquals(Keys.KEY_TAB, (row[1][0] as Plain).strokes.single().code)
+    }
+
+    @Test fun modifierArrowMacrosSupportWordNavigationInTerminalEditors() {
+        val keys = parse(
+            """[[{macro: "CTRL LEFT"}, {macro: "CTRL RIGHT"}, {macro: "ALT LEFT"}, {macro: "ALT RIGHT"}]]""",
+        )[0].map { (it as Plain).strokes.single() }
+        assertEquals(
+            listOf(
+                Stroke(Keys.KEY_LEFT, listOf(ctrl)),
+                Stroke(Keys.KEY_RIGHT, listOf(ctrl)),
+                Stroke(Keys.KEY_LEFT, listOf(alt)),
+                Stroke(Keys.KEY_RIGHT, listOf(alt)),
+            ),
+            keys,
+        )
+    }
+
     @Test fun escBracketZResolvesToShiftTab() {
         val strokes = plain("""[[{macro: "ESC [ Z"}]]""").strokes
         assertEquals(listOf(Stroke(Keys.KEY_TAB, listOf(shift))), strokes)
