@@ -1,12 +1,14 @@
 package dev.omalauncher
 
 import android.app.Notification
+import android.app.PendingIntent
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
+import java.io.File
 import dev.omalauncher.linux.LinuxState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +27,7 @@ import kotlinx.coroutines.launch
 class LinuxService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var watch: Job? = null
+    private var syncthing: SyncthingSupervisor? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -37,6 +40,16 @@ class LinuxService : Service() {
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Linux session", NotificationManager.IMPORTANCE_LOW))
         val state = (application as App).runtime.bootstrap.state
         startForeground(1, notification(state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        if (syncthing == null) {
+            // Run under the existing Linux foreground service, not a terminal
+            // and not an adb-launched PRoot; works across APK native-lib moves.
+            syncthing = SyncthingSupervisor(
+                (application as App).runtime.proot,
+                scope,
+                guestReady = { state.value == LinuxState.Installed },
+            ).also { it.start() }
+        }
+        if (intent?.action == ACTION_RECONNECT_SYNC) syncthing?.reconnect()
         if (watch == null) {
             watch =
                 scope.launch {
@@ -63,16 +76,33 @@ class LinuxService : Service() {
             else -> "Linux session running"
         }
 
-    private fun build(text: String): Notification =
-        Notification
-            .Builder(this, CHANNEL)
-            .setContentTitle(text)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .build()
+    private fun build(text: String): Notification {
+        val builder =
+            Notification
+                .Builder(this, CHANNEL)
+                .setContentTitle(text)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+        // The phone handles recovery locally; Tailscale stays the sync
+        // transport and the loopback-only Syncthing GUI is not published.
+        val config = File(filesDir, "arch/root/.local/state/syncthing/config.xml")
+        if (config.isFile) {
+            val intent = Intent(this, LinuxService::class.java).setAction(ACTION_RECONNECT_SYNC)
+            val action = PendingIntent.getService(
+                this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            builder.addAction(
+                Notification.Action.Builder(
+                    R.drawable.ic_notification, "Reconnect Sync", action,
+                ).build(),
+            )
+        }
+        return builder.build()
+    }
 
     companion object {
         private const val CHANNEL = "session"
+        private const val ACTION_RECONNECT_SYNC = "dev.omalauncher.RECONNECT_SYNC"
     }
 }
