@@ -1,8 +1,22 @@
 # Syncthing inside OmaLauncher (ADB-free recovery)
 
+## Deployed phone workaround (18 October 2026, local phone time)
+
+**Current live build:** `dev.omalauncher.debug` version 0.7.1 / versionCode 13. It does **not** contain this branch's Kotlin `SyncthingSupervisor`; the source-built APK (versionCode 12 and/or different package ID) cannot safely update it. The installed APK's signing certificate also differs from the Mac's present debug signing key. **Do not uninstall the app or force an APK replacement**: the private Arch rootfs, Pi state, and Syncthing database must be preserved.
+
+The deployed interim fix is `scripts/phone-syncthing-guardian.py`, copied to `/root/.local/bin/syncthing-guardian.py` *inside the OmaLauncher Arch rootfs* and launched as an independent, persistent PRoot child under OmaLauncher's app UID. It does not rely on Mac-side ADB for ongoing checks and does not expose an HTTP listener. On-device guard: every 120 seconds check local Syncthing API and the configured Mac's Tailscale TCP address; when the Mac is reachable but the peer stays disconnected for three consecutive observations, gracefully restart the daemon (10-minute cooldown). If the daemon exits, start it without creating a second database owner. When Mac/Tailscale is unreachable, leave the running daemon alone rather than waste CPU cycling it.
+
+Android's Doze allowlist now includes `dev.omalauncher.debug` (only that app), alongside Tailscale's existing allowance. This preserves background execution at the cost of potentially higher phone battery consumption. The existing Mac `~/.local/bin/omalauncher-syncthing` + launchd watcher remains an ADB-based **fallback**, and must not initiate a competing restart when the phone-local guardian is running. Its repetitive unavailable-ADB error logging has been rate-limited.
+
+Verification completed: direct phone-to-M4 Syncthing connection over Tailscale, both `dotfiles` and `pi-agent` at 100% completion as viewed from the M4 REST API, and the phone guardian process/log both alive. Phone guardian logs: `/root/.local/state/syncthing/guardian.log` and `guardian-boot.log`; Syncthing logs: `service.log`. Source of guardian and its intended behavior is in this repository's `scripts/phone-syncthing-guardian.py`. It has a `--once` observation option (does not modify the daemon, but writes its diagnostic log) and `/root/.local/state/syncthing/guardian.disabled` stop/recovery pause marker. Do not delete the database or rescan/re-pair devices as a recovery step.
+
+**Important limitation:** the installed OmaLauncher APK has no boot receiver or native supervisor. On a full phone reboot, force-stop, or death of the entire app's Linux foreground service, the independent PRoot guardian may not relaunch automatically. This workaround eliminates routine dependence on ADB for *daemon disconnects while the app is alive*, not a reboot-proof guarantee. Truly autonomous recovery after full app termination requires building and installing the Kotlin supervisor with the **installed APK's matching signing key**, or a separate explicitly approved and safely verified app-data migration. Neither is currently available or performed. Never reinstall merely to test this.
+
+Rollback: the guardian does not change existing Syncthing folder configurations. To pause on-device recovery, create the `guardian.disabled` marker inside the Arch rootfs; to resume, remove it. To remove the power allowance, run `adb shell cmd deviceidle whitelist -dev.omalauncher.debug` while authorized. Existing Syncthing and Pi data remain untouched.
+
 This integration is intended for a user-managed OmaLauncher debug build with an existing Arch Linux rootfs and a configured Syncthing installation. Syncthing is **not** bundled or installed automatically, and existing folders/configuration are never rewritten.
 
-## Behavior
+## Intended native Kotlin supervisor behavior (source only; not yet deployed)
 
 - Android's existing `LinuxService` foreground service owns a `SyncthingSupervisor`.
 - Once the Linux guest reports `Installed`, if `/usr/bin/syncthing` and `/root/.local/state/syncthing/config.xml` exist, it starts the existing Syncthing 2.x daemon as a PRoot child. The daemon therefore survives opening/closing guest terminal windows.
